@@ -1,0 +1,311 @@
+{
+  "name": "Restaurant Booking - Inbound Reply Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-inbound",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "name": "IN - WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "webhookId": "whatsapp-inbound"
+    },
+    {
+      "parameters": {
+        "jsCode": "// MAP - Parse WhatsApp incoming message/button reply\n// Handles: quick reply buttons, text messages\n\nconst input = $input.first().json;\n\n// Meta webhook structure: entry[].changes[].value.messages[]\nconst entry = input.entry?.[0];\nconst changes = entry?.changes?.[0];\nconst value = changes?.value;\nconst message = value?.messages?.[0];\nconst contact = value?.contacts?.[0];\n\nif (!message) {\n  // Not a message event (could be status update)\n  return [{ json: { event_type: 'status_update', skip: true } }];\n}\n\nconst phone = message.from; // E.164 without +\nconst phoneE164 = '+' + phone;\nconst messageType = message.type;\n\nlet replyAction = 'unknown';\nlet replyText = '';\n\n// Quick reply button\nif (messageType === 'button') {\n  replyText = message.button?.text || '';\n  const textLower = replyText.toLowerCase();\n  if (textLower.includes('conferm')) replyAction = 'confirm';\n  else if (textLower.includes('cancel') || textLower.includes('annul')) replyAction = 'cancel';\n  else if (textLower.includes('modif') || textLower.includes('cambi')) replyAction = 'modify';\n}\n// Interactive list/button reply\nelse if (messageType === 'interactive') {\n  const interactive = message.interactive;\n  if (interactive?.type === 'button_reply') {\n    replyText = interactive.button_reply?.title || '';\n    const id = interactive.button_reply?.id || '';\n    if (id === 'confirm' || replyText.toLowerCase().includes('conferm')) replyAction = 'confirm';\n    else if (id === 'cancel' || replyText.toLowerCase().includes('cancel')) replyAction = 'cancel';\n    else if (id === 'modify' || replyText.toLowerCase().includes('modif')) replyAction = 'modify';\n  }\n}\n// Free text\nelse if (messageType === 'text') {\n  replyText = message.text?.body || '';\n  const textLower = replyText.toLowerCase();\n  if (textLower.includes('conferm') || textLower === 'si' || textLower === 'ok') replyAction = 'confirm';\n  else if (textLower.includes('cancel') || textLower.includes('annul') || textLower === 'no') replyAction = 'cancel';\n  else if (textLower.includes('modif') || textLower.includes('cambi') || textLower.includes('spost')) replyAction = 'modify';\n  else replyAction = 'free_text';\n}\n\nreturn [{\n  json: {\n    event_type: 'message',\n    skip: false,\n    phone_e164: phoneE164,\n    contact_name: contact?.profile?.name || '',\n    message_type: messageType,\n    reply_action: replyAction,\n    reply_text: replyText,\n    message_id: message.id,\n    timestamp: message.timestamp,\n    received_at: new Date().toISOString()\n  }\n}];"
+      },
+      "name": "MAP - Parse Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "not-skip",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "IF - Is Message",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-confirm",
+              "leftValue": "={{ $json.reply_action }}",
+              "rightValue": "confirm",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "IF - Confirm",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [920, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-cancel",
+              "leftValue": "={{ $json.reply_action }}",
+              "rightValue": "cancel",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "IF - Cancel",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [920, 460]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "new_status", "value": "confirmed_by_customer" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "SET - Status Confirmed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1140, 100]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "new_status", "value": "cancelled_by_customer" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "SET - Status Cancelled",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1140, 360]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "new_status", "value": "needs_manual_review" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "SET - Needs Review",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1140, 560]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {
+          "filters": {
+            "phone_e164": "={{ $('MAP - Parse Reply').item.json.phone_e164 }}"
+          }
+        }
+      },
+      "name": "DB - Find Reservation",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1360, 300],
+      "notesInFlow": true,
+      "notes": "Looks up the most recent reservation by phone number. Configure document and sheet."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "={{ $json.new_status }}",
+            "last_inbound_message_at": "={{ new Date().toISOString() }}"
+          }
+        },
+        "options": {}
+      },
+      "name": "DB - Update Reservation",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1580, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'ok' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "name": "OUT - Ack Meta",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [480, 140],
+      "notesInFlow": true,
+      "notes": "Immediately responds 200 to Meta webhook to avoid timeout. Processing continues in parallel."
+    }
+  ],
+  "connections": {
+    "IN - WhatsApp Webhook": {
+      "main": [
+        [
+          { "node": "OUT - Ack Meta", "type": "main", "index": 0 },
+          { "node": "MAP - Parse Reply", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "MAP - Parse Reply": {
+      "main": [
+        [
+          { "node": "IF - Is Message", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "IF - Is Message": {
+      "main": [
+        [
+          { "node": "IF - Confirm", "type": "main", "index": 0 }
+        ],
+        []
+      ]
+    },
+    "IF - Confirm": {
+      "main": [
+        [
+          { "node": "SET - Status Confirmed", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "IF - Cancel", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "IF - Cancel": {
+      "main": [
+        [
+          { "node": "SET - Status Cancelled", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "SET - Needs Review", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "SET - Status Confirmed": {
+      "main": [
+        [
+          { "node": "DB - Find Reservation", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "SET - Status Cancelled": {
+      "main": [
+        [
+          { "node": "DB - Find Reservation", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "SET - Needs Review": {
+      "main": [
+        [
+          { "node": "DB - Find Reservation", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "DB - Find Reservation": {
+      "main": [
+        [
+          { "node": "DB - Update Reservation", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Rome",
+    "saveManualExecutions": true
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "restaurant" },
+    { "name": "booking" },
+    { "name": "whatsapp" },
+    { "name": "inbound" }
+  ],
+  "triggerCount": 1,
+  "versionId": "1"
+}

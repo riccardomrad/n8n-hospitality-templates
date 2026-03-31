@@ -1,0 +1,375 @@
+{
+  "name": "Restaurant Booking - Create & Confirm",
+  "nodes": [
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "RESTAURANT_NAME", "value": "Your Restaurant Name" },
+            { "name": "WHATSAPP_PHONE_NUMBER_ID", "value": "YOUR_PHONE_NUMBER_ID" },
+            { "name": "WABA_TEMPLATE_CONFIRM", "value": "booking_confirmation" },
+            { "name": "TIMEZONE", "value": "Europe/Rome" },
+            { "name": "DEFAULT_LANGUAGE", "value": "it" },
+            { "name": "GOOGLE_SHEET_ID", "value": "YOUR_GOOGLE_SHEET_ID" },
+            { "name": "SHEET_NAME", "value": "Reservations" },
+            { "name": "ADMIN_PHONE", "value": "+39340XXXXXXX" },
+            { "name": "BOOKING_SOURCE_LABEL", "value": "website" }
+          ],
+          "number": [
+            { "name": "MAX_COVERS", "value": 20 },
+            { "name": "REMINDER_HOURS_BEFORE", "value": 24 }
+          ]
+        },
+        "options": {}
+      },
+      "name": "CFG - Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [260, 300],
+      "notesInFlow": true,
+      "notes": "All configurable variables in one place. Edit these values for your restaurant."
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "restaurant-booking",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "name": "IN - Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 540],
+      "webhookId": "restaurant-booking"
+    },
+    {
+      "parameters": {
+        "jsCode": "// MAP - Normalize incoming reservation data to standard format\n// Supports: direct JSON, form data, Google Forms\n\nconst input = $input.first().json;\nconst body = input.body || input;\n\n// Extract fields with fallbacks for different input formats\nconst customerName = body.customer_name || body.name || body.nome || '';\nconst phone = body.phone || body.telefono || body.phone_number || '';\nconst date = body.date || body.data || body.reservation_date || '';\nconst time = body.time || body.ora || body.reservation_time || '';\nconst covers = parseInt(body.covers || body.coperti || body.guests || body.persone || '2');\nconst notes = body.notes || body.note || '';\nconst channel = body.channel || body.canale || 'website';\nconst language = body.language || body.lingua || 'it';\n\n// Normalize phone to E.164\nlet phoneE164 = phone.replace(/[\\s\\-\\(\\)]/g, '');\nif (phoneE164.startsWith('00')) phoneE164 = '+' + phoneE164.substring(2);\nif (!phoneE164.startsWith('+')) phoneE164 = '+39' + phoneE164;\n\n// Generate reservation ID\nconst reservationId = 'RES-' + Date.now().toString(36).toUpperCase();\n\n// Build reservation datetime\nconst reservationDatetime = date + 'T' + time + ':00';\n\nreturn [{\n  json: {\n    reservation_id: reservationId,\n    customer_name: customerName.trim(),\n    phone_e164: phoneE164,\n    reservation_date: date,\n    reservation_time: time,\n    reservation_datetime: reservationDatetime,\n    covers: covers,\n    notes: notes,\n    source_channel: channel,\n    language: language,\n    status: 'pending_confirmation',\n    created_at: new Date().toISOString(),\n    reminder_sent: 'no',\n    confirmation_message_id: '',\n    error_code: '',\n    error_message: ''\n  }\n}];"
+      },
+      "name": "MAP - Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 540]
+    },
+    {
+      "parameters": {
+        "jsCode": "// VAL - Validate required fields and business rules\n\nconst item = $input.first().json;\nconst errors = [];\n\n// Required fields\nif (!item.customer_name || item.customer_name.length < 2) {\n  errors.push('customer_name is required (min 2 chars)');\n}\n\n// Phone E.164 validation\nconst phoneRegex = /^\\+[1-9]\\d{7,14}$/;\nif (!phoneRegex.test(item.phone_e164)) {\n  errors.push('phone must be valid E.164 format (e.g., +393401234567)');\n}\n\n// Date validation\nconst dateRegex = /^\\d{4}-\\d{2}-\\d{2}$/;\nif (!dateRegex.test(item.reservation_date)) {\n  errors.push('date must be YYYY-MM-DD format');\n}\n\n// Time validation\nconst timeRegex = /^\\d{2}:\\d{2}$/;\nif (!timeRegex.test(item.reservation_time)) {\n  errors.push('time must be HH:MM format');\n}\n\n// Date must be today or future\nconst resDate = new Date(item.reservation_datetime);\nconst now = new Date();\nif (resDate < now) {\n  errors.push('reservation date must be in the future');\n}\n\n// Covers range\nif (item.covers < 1 || item.covers > 50) {\n  errors.push('covers must be between 1 and 50');\n}\n\nreturn [{\n  json: {\n    ...item,\n    is_valid: errors.length === 0,\n    validation_errors: errors\n  }\n}];"
+      },
+      "name": "VAL - Validate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 540]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "valid-check",
+              "leftValue": "={{ $json.is_valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "IF - Valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [920, 540]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "name": "DB - Save Reservation",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1140, 440],
+      "notesInFlow": true,
+      "notes": "Configure: select your Google Sheet document and sheet name. Columns must match the field names from MAP node."
+    },
+    {
+      "parameters": {
+        "operation": "sendTemplate",
+        "phoneNumberId": "={{ $('CFG - Settings').item.json.WHATSAPP_PHONE_NUMBER_ID }}",
+        "recipientPhoneNumber": "={{ $json.phone_e164 }}",
+        "templateName": "={{ $('CFG - Settings').item.json.WABA_TEMPLATE_CONFIRM }}",
+        "language": "it",
+        "components": {
+          "values": [
+            {
+              "type": "body",
+              "parameters": [
+                {
+                  "type": "text",
+                  "text": "={{ $json.customer_name }}"
+                },
+                {
+                  "type": "text",
+                  "text": "={{ $json.covers }}"
+                },
+                {
+                  "type": "text",
+                  "text": "={{ $json.reservation_date }}"
+                },
+                {
+                  "type": "text",
+                  "text": "={{ $json.reservation_time }}"
+                },
+                {
+                  "type": "text",
+                  "text": "={{ $('CFG - Settings').item.json.RESTAURANT_NAME }}"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "name": "WA - Send Confirmation",
+      "type": "n8n-nodes-base.whatsapp",
+      "typeVersion": 2,
+      "position": [1360, 440],
+      "notesInFlow": true,
+      "notes": "Sends WhatsApp template 'booking_confirmation' with reservation details. Template must be approved in Meta Business Suite.",
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "",
+          "name": "WhatsApp Business"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "confirmed"
+            },
+            {
+              "name": "confirmation_message_id",
+              "value": "={{ $json.messages?.[0]?.id || 'sent' }}"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": false
+        }
+      },
+      "name": "LOG - Update Status",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1580, 340]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      },
+      "name": "DB - Update Status",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1800, 340],
+      "notesInFlow": true,
+      "notes": "Updates the reservation row with confirmed status and WhatsApp message ID."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, reservation_id: $('MAP - Normalize').item.json.reservation_id, status: 'confirmed', message: 'Booking confirmed. WhatsApp confirmation sent.' }) }}",
+        "options": {
+          "responseCode": 201
+        }
+      },
+      "name": "OUT - Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2020, 340]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, errors: $('VAL - Validate').item.json.validation_errors, message: 'Validation failed. Please check your data.' }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "name": "OUT - Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1140, 700]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "confirmation_failed"
+            },
+            {
+              "name": "error_message",
+              "value": "={{ $json.error?.message || 'WhatsApp send failed' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "ERR - WhatsApp Failed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1580, 540]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, reservation_id: $('MAP - Normalize').item.json.reservation_id, status: 'saved_but_whatsapp_failed', message: 'Booking saved but WhatsApp confirmation could not be sent. Staff will confirm manually.' }) }}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "name": "OUT - Partial Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1800, 540]
+    }
+  ],
+  "connections": {
+    "IN - Webhook": {
+      "main": [
+        [
+          { "node": "CFG - Settings", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "CFG - Settings": {
+      "main": [
+        [
+          { "node": "MAP - Normalize", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "MAP - Normalize": {
+      "main": [
+        [
+          { "node": "VAL - Validate", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "VAL - Validate": {
+      "main": [
+        [
+          { "node": "IF - Valid", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "IF - Valid": {
+      "main": [
+        [
+          { "node": "DB - Save Reservation", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "OUT - Validation Error", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "DB - Save Reservation": {
+      "main": [
+        [
+          { "node": "WA - Send Confirmation", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "WA - Send Confirmation": {
+      "main": [
+        [
+          { "node": "LOG - Update Status", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "ERR - WhatsApp Failed", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "LOG - Update Status": {
+      "main": [
+        [
+          { "node": "DB - Update Status", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "DB - Update Status": {
+      "main": [
+        [
+          { "node": "OUT - Success Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "ERR - WhatsApp Failed": {
+      "main": [
+        [
+          { "node": "OUT - Partial Success", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Rome",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "restaurant" },
+    { "name": "booking" },
+    { "name": "whatsapp" }
+  ],
+  "triggerCount": 1,
+  "versionId": "1"
+}

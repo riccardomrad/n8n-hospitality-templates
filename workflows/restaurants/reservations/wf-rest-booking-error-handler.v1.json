@@ -1,0 +1,126 @@
+{
+  "name": "Restaurant Booking - Error Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "IN - Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// MAP - Extract error details from the error trigger payload\n\nconst error = $input.first().json;\n\nconst errorData = {\n  workflow_name: error.workflow?.name || 'Unknown',\n  workflow_id: error.workflow?.id || '',\n  execution_id: error.execution?.id || '',\n  error_message: error.execution?.error?.message || 'Unknown error',\n  error_node: error.execution?.lastNodeExecuted || 'Unknown',\n  error_timestamp: new Date().toISOString(),\n  execution_url: error.execution?.url || ''\n};\n\nreturn [{ json: errorData }];"
+      },
+      "name": "MAP - Extract Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      },
+      "name": "DB - Log Error",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [700, 300],
+      "notesInFlow": true,
+      "notes": "Logs errors to a separate 'Errors' sheet in your Google Sheet. Create a sheet tab called 'Errors' with columns: workflow_name, workflow_id, execution_id, error_message, error_node, error_timestamp, execution_url"
+    },
+    {
+      "parameters": {
+        "operation": "sendTemplate",
+        "phoneNumberId": "YOUR_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "+39340XXXXXXX",
+        "templateName": "admin_error_alert",
+        "language": "it",
+        "components": {
+          "values": [
+            {
+              "type": "body",
+              "parameters": [
+                {
+                  "type": "text",
+                  "text": "={{ $json.workflow_name }}"
+                },
+                {
+                  "type": "text",
+                  "text": "={{ $json.error_message }}"
+                },
+                {
+                  "type": "text",
+                  "text": "={{ $json.error_node }}"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "name": "WA - Alert Admin",
+      "type": "n8n-nodes-base.whatsapp",
+      "typeVersion": 2,
+      "position": [920, 300],
+      "notesInFlow": true,
+      "notes": "Optional: sends a WhatsApp alert to the admin. Replace phone number and template name. You can also use Email or Telegram instead.",
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "",
+          "name": "WhatsApp Business"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "IN - Error Trigger": {
+      "main": [
+        [
+          { "node": "MAP - Extract Error", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "MAP - Extract Error": {
+      "main": [
+        [
+          { "node": "DB - Log Error", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "DB - Log Error": {
+      "main": [
+        [
+          { "node": "WA - Alert Admin", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Rome",
+    "saveManualExecutions": true
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "restaurant" },
+    { "name": "error-handler" }
+  ],
+  "triggerCount": 1,
+  "versionId": "1"
+}

@@ -1,0 +1,246 @@
+{
+  "name": "Restaurant Booking - Reminder 24h",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "name": "IN - Schedule Every 15min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "RESTAURANT_NAME", "value": "Your Restaurant Name" },
+            { "name": "WHATSAPP_PHONE_NUMBER_ID", "value": "YOUR_PHONE_NUMBER_ID" },
+            { "name": "WABA_TEMPLATE_REMINDER", "value": "booking_reminder" },
+            { "name": "GOOGLE_SHEET_ID", "value": "YOUR_GOOGLE_SHEET_ID" },
+            { "name": "SHEET_NAME", "value": "Reservations" }
+          ],
+          "number": [
+            { "name": "REMINDER_HOURS_BEFORE", "value": 24 }
+          ]
+        },
+        "options": {}
+      },
+      "name": "CFG - Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [480, 300],
+      "notesInFlow": true,
+      "notes": "Edit these values to match your restaurant setup."
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {}
+      },
+      "name": "DB - Read Reservations",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [700, 300],
+      "notesInFlow": true,
+      "notes": "Reads all reservations from the Google Sheet. Configure document and sheet."
+    },
+    {
+      "parameters": {
+        "jsCode": "// FILTER - Find reservations that need a reminder\n// Criteria: status=confirmed, reminder_sent=no, reservation within 23.5h-24.5h from now\n\nconst items = $input.all();\nconst now = new Date();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  \n  // Skip if not confirmed or already reminded\n  if (data.status !== 'confirmed') continue;\n  if (data.reminder_sent === 'yes') continue;\n  \n  // Parse reservation datetime\n  const resDatetime = new Date(data.reservation_datetime);\n  if (isNaN(resDatetime.getTime())) continue;\n  \n  // Calculate hours until reservation\n  const hoursUntil = (resDatetime.getTime() - now.getTime()) / (1000 * 60 * 60);\n  \n  // Send reminder if reservation is between 23.5h and 24.5h away\n  if (hoursUntil >= 23.5 && hoursUntil <= 24.5) {\n    results.push({\n      json: {\n        ...data,\n        hours_until: Math.round(hoursUntil * 10) / 10\n      }\n    });\n  }\n}\n\n// If no reservations need reminding, return empty to stop the flow\nif (results.length === 0) {\n  return [{ json: { no_reminders: true, checked_at: now.toISOString() } }];\n}\n\nreturn results;"
+      },
+      "name": "FILTER - Due Reminders",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-reminders",
+              "leftValue": "={{ $json.no_reminders }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "IF - Has Reminders",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1140, 300]
+    },
+    {
+      "parameters": {
+        "operation": "sendTemplate",
+        "phoneNumberId": "={{ $('CFG - Settings').item.json.WHATSAPP_PHONE_NUMBER_ID }}",
+        "recipientPhoneNumber": "={{ $json.phone_e164 }}",
+        "templateName": "={{ $('CFG - Settings').item.json.WABA_TEMPLATE_REMINDER }}",
+        "language": "it",
+        "components": {
+          "values": [
+            {
+              "type": "body",
+              "parameters": [
+                {
+                  "type": "text",
+                  "text": "={{ $json.customer_name }}"
+                },
+                {
+                  "type": "text",
+                  "text": "={{ $json.reservation_time }}"
+                },
+                {
+                  "type": "text",
+                  "text": "={{ $json.covers }}"
+                },
+                {
+                  "type": "text",
+                  "text": "={{ $('CFG - Settings').item.json.RESTAURANT_NAME }}"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "name": "WA - Send Reminder",
+      "type": "n8n-nodes-base.whatsapp",
+      "typeVersion": 2,
+      "position": [1360, 200],
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "",
+          "name": "WhatsApp Business"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "reminder_sent": "yes",
+            "reminder_sent_at": "={{ new Date().toISOString() }}"
+          }
+        },
+        "options": {}
+      },
+      "name": "DB - Mark Reminded",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1580, 200],
+      "notesInFlow": true,
+      "notes": "Updates reminder_sent to 'yes' so it won't be sent again."
+    },
+    {
+      "parameters": {},
+      "name": "END - No Reminders",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1360, 400]
+    }
+  ],
+  "connections": {
+    "IN - Schedule Every 15min": {
+      "main": [
+        [
+          { "node": "CFG - Settings", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "CFG - Settings": {
+      "main": [
+        [
+          { "node": "DB - Read Reservations", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "DB - Read Reservations": {
+      "main": [
+        [
+          { "node": "FILTER - Due Reminders", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "FILTER - Due Reminders": {
+      "main": [
+        [
+          { "node": "IF - Has Reminders", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "IF - Has Reminders": {
+      "main": [
+        [
+          { "node": "END - No Reminders", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "WA - Send Reminder", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "WA - Send Reminder": {
+      "main": [
+        [
+          { "node": "DB - Mark Reminded", "type": "main", "index": 0 }
+        ],
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Rome",
+    "saveManualExecutions": true
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "restaurant" },
+    { "name": "reminder" },
+    { "name": "whatsapp" }
+  ],
+  "triggerCount": 1,
+  "versionId": "1"
+}

@@ -1,0 +1,17 @@
+# Environment files
+.env
+demo/.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Node
+node_modules/
+
+# Research (local only, not for the public repo)
+ricerche/

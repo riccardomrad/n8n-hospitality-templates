@@ -1,0 +1,47 @@
+name: Workflow request
+description: Propose a new workflow or improvement to an existing one
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your idea! The more details you provide, the better we can evaluate it.
+
+  - type: dropdown
+    id: business_type
+    attributes:
+      label: Business type
+      options:
+        - Restaurant
+        - Hotel / B&B
+        - Salon / Beauty
+        - Medical practice
+        - Bar / Cafe
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use case
+      description: Describe the business problem this workflow should solve
+      placeholder: e.g., Send automatic WhatsApp messages to guests after checkout
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: Workflow idea
+      description: Describe how you imagine the flow (even non-technical is fine)
+    validations:
+      required: false
+
+  - type: textarea
+    id: tools
+    attributes:
+      label: Tools / integrations involved
+      description: e.g., WhatsApp Business API, Gmail, Google Sheets, PMS
+    validations:
+      required: false
