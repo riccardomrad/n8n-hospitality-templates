@@ -1,0 +1,54 @@
+name: Validate Workflows
+
+  on:
+    push:
+      paths:
+        - 'workflows/**/*.json'
+    pull_request:
+      paths:
+        - 'workflows/**/*.json'
+
+  jobs:
+    validate-json:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+
+        - name: Validate JSON files
+          run: |
+            echo "Validating workflow JSON files..."
+            errors=0
+            for file in $(find workflows -name "*.json" -type
+  f); do
+              if ! python3 -c "import json;
+  json.load(open('$file'))"; then
+                echo "INVALID: $file"
+                errors=$((errors + 1))
+              else
+                echo "OK: $file"
+              fi
+            done
+            if [ $errors -gt 0 ]; then
+              echo "$errors file(s) failed validation"
+              exit 1
+            fi
+            echo "All workflow files are valid JSON"
+
+        - name: Check workflow structure
+          run: |
+            echo "Checking workflow structure..."
+            for file in $(find workflows -name "wf-*.json" -type
+   f); do
+              has_nodes=$(python3 -c "
+            import json, sys
+            data = json.load(open('$file'))
+            if 'nodes' not in data:
+                print('MISSING_NODES')
+                sys.exit(1)
+            if 'connections' not in data:
+                print('MISSING_CONNECTIONS')
+                sys.exit(1)
+            print('OK')
+            ")
+              echo "$file: $has_nodes"
+            done
