@@ -1,13 +1,28 @@
-# n8n Local Business Automation Kit
+<p align="center">
+  <img src="docs/images/booking-flow.png" width="900"
+       alt="Il flusso: il cliente scrive su WhatsApp, n8n controlla e salva la prenotazione, parte la conferma, il promemoria esce 24 ore prima, la risposta del cliente aggiorna la tabella, e ogni errore avvisa il titolare">
+</p>
 
-Workflow n8n pronti all'uso per automatizzare **ristoranti, hotel, saloni e studi medici**: prenotazioni, promemoria WhatsApp, follow-up recensioni, campagne marketing e molto altro.
+<h1 align="center">n8n Local Business Automation Kit</h1>
 
-[![Made with n8n](https://img.shields.io/badge/made%20with-n8n-EA4B71)](https://n8n.io)
-[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
-[![Made in Italy](https://img.shields.io/badge/made%20in-Italy%20%F0%9F%87%AE%F0%9F%87%B9-008C45)](https://radlab.it)
+<p align="center">
+  Workflow n8n pronti da importare che fanno rispondere WhatsApp al posto del ristorante:<br>
+  prenotazioni, conferme, promemoria, e un gestore di errori che non fallisce mai in silenzio.
+</p>
 
-> **Read this in:** [English](README.md)
+<p align="center">
+  <a href="https://n8n.io"><img src="https://img.shields.io/badge/-n8n%20%E2%89%A5%201.50-1B3A5C?style=flat&colorA=1B3A5C" alt="n8n 1.50 o superiore"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/-Apache%202.0-1B3A5C?style=flat&colorA=1B3A5C" alt="Licenza Apache 2.0"></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/-PRs%20welcome-1B3A5C?style=flat&colorA=1B3A5C" alt="PR benvenute"></a>
+  <a href="https://radlab.it"><img src="https://img.shields.io/badge/-Made%20in%20Italy%20%F0%9F%87%AE%F0%9F%87%B9-1B3A5C?style=flat&colorA=1B3A5C" alt="Made in Italy"></a>
+</p>
+
+<p align="center">
+  <a href="#provalo-in-5-minuti">Come partire</a> |
+  <a href="docs/guides/setup-restaurant-booking.md">Guida di installazione</a> |
+  <a href="#disponibili-adesso-prenotazioni-ristorante">Workflow</a> |
+  <a href="README.md">English 🇬🇧</a>
+</p>
 
 ---
 

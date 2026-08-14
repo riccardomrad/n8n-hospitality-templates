@@ -1,13 +1,28 @@
-# n8n Local Business Automation Kit
+<p align="center">
+  <img src="docs/images/booking-flow.png" width="900"
+       alt="Flow: the guest writes on WhatsApp, n8n checks and saves the booking, the confirmation goes out, the reminder leaves 24h before, the guest's reply updates the table, and any failure alerts the owner">
+</p>
 
-Ready-to-use n8n workflows to automate **restaurants, hotels, salons and medical practices**: bookings, WhatsApp reminders, review follow-ups, marketing campaigns and more.
+<h1 align="center">n8n Local Business Automation Kit</h1>
 
-[![Made with n8n](https://img.shields.io/badge/made%20with-n8n-EA4B71)](https://n8n.io)
-[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
-[![Made in Italy](https://img.shields.io/badge/made%20in-Italy%20%F0%9F%87%AE%F0%9F%87%B9-008C45)](https://radlab.it)
+<p align="center">
+  Ready-to-import n8n workflows that let WhatsApp answer for a restaurant:<br>
+  bookings, confirmations, reminders, and an error handler that never fails silently.
+</p>
 
-> **Read this in:** [Italiano](README.IT.md)
+<p align="center">
+  <a href="https://n8n.io"><img src="https://img.shields.io/badge/-n8n%20%E2%89%A5%201.50-1B3A5C?style=flat&colorA=1B3A5C" alt="n8n 1.50 or newer"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/-Apache%202.0-1B3A5C?style=flat&colorA=1B3A5C" alt="Apache 2.0 license"></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/-PRs%20welcome-1B3A5C?style=flat&colorA=1B3A5C" alt="PRs welcome"></a>
+  <a href="https://radlab.it"><img src="https://img.shields.io/badge/-Made%20in%20Italy%20%F0%9F%87%AE%F0%9F%87%B9-1B3A5C?style=flat&colorA=1B3A5C" alt="Made in Italy"></a>
+</p>
+
+<p align="center">
+  <a href="#try-it-in-5-minutes">Quick start</a> |
+  <a href="docs/guides/setup-restaurant-booking.md">Setup guide</a> |
+  <a href="#available-now-restaurant-bookings">Workflows</a> |
+  <a href="README.IT.md">Italiano 🇮🇹</a>
+</p>
 
 ---
 
