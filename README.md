@@ -5,6 +5,7 @@ Ready-to-use n8n workflows to automate **restaurants, hotels, salons and medical
 [![Made with n8n](https://img.shields.io/badge/made%20with-n8n-EA4B71)](https://n8n.io)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+[![Made in Italy](https://img.shields.io/badge/made%20in-Italy%20%F0%9F%87%AE%F0%9F%87%B9-008C45)](https://radlab.it)
 
 > **Read this in:** [Italiano](README.IT.md)
 
@@ -36,78 +37,44 @@ No coding required. Import the JSON, set up your credentials, and you're live.
 
 ---
 
-## Use cases
+## Available now: restaurant bookings
 
-- [Restaurants](#-restaurants)
-- [Hotels & B\&Bs](#-hotels--bbs)
-- [Salons & Beauty](#-salons--beauty)
-- [Medical Practices](#-medical-practices)
+Four workflows that work together as one booking system. Each one has its own page in [`docs/workflows/restaurants/`](docs/workflows/restaurants/).
 
----
+| Workflow | File | What it does |
+|----------|------|--------------|
+| Create & Confirm | [`wf-rest-booking-create.v1.json`](workflows/restaurants/reservations/wf-rest-booking-create.v1.json) | Takes a booking request from a webhook, validates it, saves the reservation and sends the WhatsApp confirmation |
+| Inbound Reply Handler | [`wf-rest-booking-inbound.v1.json`](workflows/restaurants/reservations/wf-rest-booking-inbound.v1.json) | Reads the guest's reply, marks the reservation confirmed or cancelled, flags anything it cannot parse for a human |
+| Reminder 24h | [`wf-rest-booking-reminder.v1.json`](workflows/restaurants/reservations/wf-rest-booking-reminder.v1.json) | Runs every 15 minutes, sends the reminder to the bookings due tomorrow, marks them as reminded |
+| Error Handler | [`wf-rest-booking-error-handler.v1.json`](workflows/restaurants/reservations/wf-rest-booking-error-handler.v1.json) | Catches failures from the other three, logs them and alerts the owner instead of failing silently |
 
-### Restaurants
-
-| Workflow | Description | Folder |
-|----------|-------------|--------|
-| WhatsApp Booking Confirmation | Auto-confirm reservations via WhatsApp | `workflows/restaurants/reservations/` |
-| No-Show Recovery | Tag no-show clients and send a recovery message | `workflows/restaurants/reservations/` |
-| Google Review Request | Ask for a review 2h after the dinner service | `workflows/restaurants/marketing/` |
-| Weekly Report | Summary of bookings, no-shows and reviews | `workflows/restaurants/operations/` |
-
-**Typical results:** fewer missed calls, fewer no-shows, more Google reviews.
+**Typical results:** fewer missed calls, fewer no-shows.
 
 ---
 
-### Hotels & B&Bs
+## Roadmap
 
-| Workflow | Description | Folder |
-|----------|-------------|--------|
-| Pre-Stay Welcome | WhatsApp message with check-in info, parking, upsell | `workflows/hotels/booking/` |
-| Booking Reminder | Confirmation + reminder 24h before arrival | `workflows/hotels/booking/` |
-| Post-Stay Review | Ask for a Google/Booking review after checkout | `workflows/hotels/marketing/` |
-| Win-Back Campaign | Message past guests after 30/180 days | `workflows/hotels/marketing/` |
+Not published yet. These run in production for clients and get released here once they are generic enough to be useful to someone else.
 
-**Typical results:** better guest experience, more direct bookings, higher review scores.
+- **Restaurants:** no-show recovery, Google review request, weekly report
+- **Hotels & B&Bs:** pre-stay welcome, booking reminder, post-stay review, win-back campaign
+- **Salons & Beauty:** appointment reminder, no-show follow-up, rebooking nudge
+- **Medical practices:** appointment reminder, annual check-up recall, post-visit feedback
 
----
-
-### Salons & Beauty
-
-| Workflow | Description | Folder |
-|----------|-------------|--------|
-| Appointment Reminder | WhatsApp reminder 24h before, with confirm/cancel buttons | `workflows/salons/appointments/` |
-| No-Show Follow-Up | Automatic re-engagement after a missed appointment | `workflows/salons/appointments/` |
-| Rebooking Nudge | "Time for a new haircut?" after X weeks | `workflows/salons/marketing/` |
-
-**Typical results:** fewer no-shows, higher rebooking rate.
-
----
-
-### Medical Practices
-
-| Workflow | Description | Folder |
-|----------|-------------|--------|
-| Appointment Reminder | Multi-channel reminder (WhatsApp + SMS fallback) | `workflows/clinics/appointments/` |
-| Annual Check-Up Recall | Yearly reminder for check-ups and screenings | `workflows/clinics/appointments/` |
-| Post-Visit Feedback | Quick satisfaction survey after the visit | `workflows/clinics/marketing/` |
-
-**Typical results:** fewer missed appointments, better patient retention.
+Want one of these sooner? [Open an issue](../../issues/new) and say which one, it helps me pick the order.
 
 ---
 
 ## Repository structure
 
 ```
-workflows/           # n8n workflow JSON files, organized by industry
-  restaurants/       #   reservations, marketing, operations
-  hotels/            #   booking, marketing, operations
-  salons/            #   appointments, marketing
-  clinics/           #   appointments, marketing
-  _shared-snippets/  #   reusable sub-flows (phone normalization, etc.)
-docs/                # Documentation for each workflow + setup guides
-  workflows/         #   one .md per workflow (mirrors workflows/ structure)
-  guides/            #   general guides (self-hosted setup, credentials, etc.)
-  images/            #   screenshots and diagrams
+workflows/
+  restaurants/
+    reservations/    # the 4 booking workflows above
+docs/
+  workflows/
+    restaurants/     # one .md per workflow
+  guides/            # general guides (self-hosted setup, credentials)
 demo/                # Docker Compose for local testing
 .github/             # CI, issue templates, PR template
 ```
@@ -155,7 +122,7 @@ You are free to use these workflows commercially, as long as you:
 - Keep clear attribution to **RAD LAB** as the original author
 - Don't resell them as-is as a closed proprietary product without substantial modifications
 
-For commercial licensing questions: [hello@radlab.it](mailto:hello@radlab.it)
+For commercial licensing questions: [riccardo@radlab.it](mailto:riccardo@radlab.it)
 
 ---
 

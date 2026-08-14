@@ -5,6 +5,7 @@ Workflow n8n pronti all'uso per automatizzare **ristoranti, hotel, saloni e stud
 [![Made with n8n](https://img.shields.io/badge/made%20with-n8n-EA4B71)](https://n8n.io)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+[![Made in Italy](https://img.shields.io/badge/made%20in-Italy%20%F0%9F%87%AE%F0%9F%87%B9-008C45)](https://radlab.it)
 
 > **Read this in:** [English](README.md)
 
@@ -36,78 +37,44 @@ Nessun codice richiesto. Importa il JSON, configura le credenziali e sei operati
 
 ---
 
-## Casi d'uso
+## Disponibili adesso: prenotazioni ristorante
 
-- [Ristoranti](#-ristoranti)
-- [Hotel e B\&B](#-hotel-e-bb)
-- [Saloni e centri estetici](#-saloni-e-centri-estetici)
-- [Studi medici](#-studi-medici)
+Quattro workflow che lavorano insieme come un unico sistema di prenotazione. Ognuno ha la sua pagina in [`docs/workflows/restaurants/`](docs/workflows/restaurants/).
 
----
+| Workflow | File | Cosa fa |
+|----------|------|---------|
+| Create & Confirm | [`wf-rest-booking-create.v1.json`](workflows/restaurants/reservations/wf-rest-booking-create.v1.json) | Riceve la richiesta da un webhook, la valida, salva la prenotazione e manda la conferma su WhatsApp |
+| Inbound Reply Handler | [`wf-rest-booking-inbound.v1.json`](workflows/restaurants/reservations/wf-rest-booking-inbound.v1.json) | Legge la risposta del cliente, segna la prenotazione come confermata o annullata, e mette da parte per un umano quello che non riesce a interpretare |
+| Reminder 24h | [`wf-rest-booking-reminder.v1.json`](workflows/restaurants/reservations/wf-rest-booking-reminder.v1.json) | Gira ogni 15 minuti, manda il promemoria alle prenotazioni di domani e le segna come avvisate |
+| Error Handler | [`wf-rest-booking-error-handler.v1.json`](workflows/restaurants/reservations/wf-rest-booking-error-handler.v1.json) | Intercetta gli errori degli altri tre, li registra e avvisa il titolare invece di fallire in silenzio |
 
-### Ristoranti
-
-| Workflow | Descrizione | Cartella |
-|----------|-------------|----------|
-| Conferma prenotazione WhatsApp | Conferma automatica della prenotazione via WhatsApp | `workflows/restaurants/reservations/` |
-| Recupero no-show | Tagga i clienti no-show e invia messaggio di recupero | `workflows/restaurants/reservations/` |
-| Richiesta recensione Google | Chiede una recensione 2h dopo il servizio cena | `workflows/restaurants/marketing/` |
-| Report settimanale | Riepilogo prenotazioni, no-show e recensioni | `workflows/restaurants/operations/` |
-
-**Risultati tipici:** meno telefonate perse, meno no-show, piu recensioni su Google.
+**Risultati tipici:** meno telefonate perse, meno no-show.
 
 ---
 
-### Hotel e B&B
+## Cosa arriva dopo
 
-| Workflow | Descrizione | Cartella |
-|----------|-------------|----------|
-| Welcome pre-soggiorno | Messaggio WhatsApp con info check-in, parcheggio, upsell | `workflows/hotels/booking/` |
-| Promemoria prenotazione | Conferma + reminder 24h prima dell'arrivo | `workflows/hotels/booking/` |
-| Recensione post-soggiorno | Richiesta recensione Google/Booking dopo il checkout | `workflows/hotels/marketing/` |
-| Campagna win-back | Messaggio agli ex ospiti dopo 30/180 giorni | `workflows/hotels/marketing/` |
+Non ancora pubblicati. Girano in produzione per i clienti e vengono rilasciati qui quando diventano abbastanza generici da servire anche a qualcun altro.
 
-**Risultati tipici:** esperienza ospite migliore, piu prenotazioni dirette, punteggi recensioni piu alti.
+- **Ristoranti:** recupero no-show, richiesta recensione Google, report settimanale
+- **Hotel e B&B:** welcome pre-soggiorno, promemoria prenotazione, recensione post-soggiorno, campagna win-back
+- **Saloni e centri estetici:** promemoria appuntamento, follow-up no-show, nudge riprenotazione
+- **Studi medici:** promemoria appuntamento, richiamo check-up annuale, feedback post-visita
 
----
-
-### Saloni e centri estetici
-
-| Workflow | Descrizione | Cartella |
-|----------|-------------|----------|
-| Promemoria appuntamento | Reminder WhatsApp 24h prima con pulsanti conferma/cancella | `workflows/salons/appointments/` |
-| Follow-up no-show | Re-engagement automatico dopo un appuntamento mancato | `workflows/salons/appointments/` |
-| Nudge riprenotazione | "E ora di un nuovo taglio?" dopo X settimane | `workflows/salons/marketing/` |
-
-**Risultati tipici:** meno no-show, tasso di riprenotazione piu alto.
-
----
-
-### Studi medici
-
-| Workflow | Descrizione | Cartella |
-|----------|-------------|----------|
-| Promemoria appuntamento | Reminder multi-canale (WhatsApp + SMS fallback) | `workflows/clinics/appointments/` |
-| Richiamo check-up annuale | Promemoria annuale per visite di controllo | `workflows/clinics/appointments/` |
-| Feedback post-visita | Sondaggio di soddisfazione rapido dopo la visita | `workflows/clinics/marketing/` |
-
-**Risultati tipici:** meno appuntamenti saltati, migliore fidelizzazione pazienti.
+Te ne serve uno prima degli altri? [Apri una issue](../../issues/new) e dimmi quale, mi aiuta a scegliere l'ordine.
 
 ---
 
 ## Struttura del repository
 
 ```
-workflows/           # File JSON dei workflow n8n, organizzati per settore
-  restaurants/       #   prenotazioni, marketing, operazioni
-  hotels/            #   booking, marketing, operazioni
-  salons/            #   appuntamenti, marketing
-  clinics/           #   appuntamenti, marketing
-  _shared-snippets/  #   sub-flow riutilizzabili (normalizzazione telefono, ecc.)
-docs/                # Documentazione per ogni workflow + guide setup
-  workflows/         #   un .md per workflow (specchia la struttura workflows/)
-  guides/            #   guide generali (setup self-hosted, credenziali, ecc.)
-  images/            #   screenshot e diagrammi
+workflows/
+  restaurants/
+    reservations/    # i 4 workflow di prenotazione qui sopra
+docs/
+  workflows/
+    restaurants/     # un .md per workflow
+  guides/            # guide generali (setup self-hosted, credenziali)
 demo/                # Docker Compose per test in locale
 .github/             # CI, template issue, template PR
 ```
@@ -155,7 +122,7 @@ Puoi usare liberamente questi workflow anche in contesti commerciali, a condizio
 - Mantenere chiaro riferimento a **RAD LAB** come autore originario
 - Non rivenderli cosi come sono come prodotto proprietario chiuso senza modifiche sostanziali
 
-Per domande su licenze commerciali: [hello@radlab.it](mailto:hello@radlab.it)
+Per domande su licenze commerciali: [riccardo@radlab.it](mailto:riccardo@radlab.it)
 
 ---
 
